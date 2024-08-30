@@ -118,6 +118,9 @@ class SetupBaseStructure:
         # Dictionary to keep track of all leg details across time
         self.positionTracking = {}
 
+        # Keep the chain object list in memory that gets updated before every Strategy update code run.
+        self.context.chain = None
+
         # Assign the DEFAULT_PARAMETERS
         self.AddConfiguration(**SetupBaseStructure.DEFAULT_PARAMETERS)
         self.SetBacktestCutOffTime()

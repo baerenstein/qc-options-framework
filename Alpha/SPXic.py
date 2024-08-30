@@ -83,6 +83,7 @@ class SPXic(Base):
             self.logger.debug(f"SPXic -> getOrder -> current_time in trade_times: {current_time in trade_times}")
             if current_time not in trade_times:
                 return None
+
             call =  self.order.getSpreadOrder(
                 chain,
                 'call',
