@@ -308,7 +308,7 @@ class OrderBuilder:
         """
         return self.getToDeltaStrike(contracts, delta = delta, default = 0)
 
-    def getContracts(self, contracts, type = None, fromDelta = None, toDelta = None, fromStrike = None, toStrike = None, fromPrice = None, toPrice = None, reverse = False):
+    def getContracts(self, contracts, type = None, fromDelta = None, toDelta = None, fromStrike = None, toStrike = None, fromPrice = None, toPrice = None, ivLimit = None, reverse = False):
         """
         Filters and sorts option contracts based on specified criteria.
 
@@ -321,6 +321,7 @@ class OrderBuilder:
             toStrike (float, optional): The maximum strike price.
             fromPrice (float, optional): The minimum option price.
             toPrice (float, optional): The maximum option price.
+            ivLimit (float, optional): 
             reverse (bool, optional): If True, sort the contracts in descending order.
 
         Returns:
@@ -331,6 +332,7 @@ class OrderBuilder:
         fromPrice = fromPrice or 0
         toStrike = toStrike or float('inf')
         toPrice = toPrice or float('inf')
+        ivLimit = ivLimit or float('inf')
 
         # Get the Put contracts, sorted by ascending strike. Apply the Strike/Price constraints
         puts = []
@@ -344,6 +346,9 @@ class OrderBuilder:
                                 and self.contractUtils.getSecurity(contract).IsTradable
                                 # Option price constraint (based on the mid-price)
                                 and (fromPrice <= self.contractUtils.midPrice(contract) <= toPrice)
+                                # Implied volatility constraint
+                                and contract.iv > ivLimit
+                                # alt: and contract.isInsiseIVRange == True
                         ]
                         , key = lambda x: x.Strike
                         , reverse = False
@@ -361,6 +366,9 @@ class OrderBuilder:
                                 and self.contractUtils.getSecurity(contract).IsTradable
                                 # Option price constraint (based on the mid-price)
                                 and (fromPrice <= self.contractUtils.midPrice(contract) <= toPrice)
+                                 # Implied volatility constraint
+                                 and contract.iv > ivLimit
+                                 # alt: and contract.isInsiseIVRange == True
                             ]
                             , key = lambda x: x.Strike
                             , reverse = False
