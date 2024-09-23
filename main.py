@@ -9,10 +9,10 @@ from Execution import AutoExecutionModel, SmartPricingExecutionModel, SPXExecuti
 from Monitor import HedgeRiskManagementModel, NoStopLossModel, StopLossModel, FPLMonitorModel, SPXicMonitor, CCMonitor, SPXButterflyMonitor, SPXCondorMonitor
 from PortfolioConstruction import OptionsPortfolioConstruction
 # The alpha models
-from Alpha import FPLModel, CCModel, SPXic, SPXButterfly, SPXCondor
+from Alpha import FPLModel, CCModel, SPXic, SPXButterfly, SPXCondor, AssignmentModel
 # The execution classes
 from Initialization import SetupBaseStructure, HandleOrderEvents
-from Tools import Performance
+from Tools import Performance, PositionsStore
 
 
 """
@@ -36,7 +36,7 @@ class CentralAlgorithm(QCAlgorithm):
         # WARNING!! If your are going to trade SPX 0DTE options then make sure you set the startDate after July 1st 2022.
         # This is the start of the data we have.
         self.SetStartDate(2023, 1, 3)
-        self.SetEndDate(2023, 1, 4)
+        self.SetEndDate(2023, 1, 17)
         # self.SetStartDate(2024, 4, 1)
         # self.SetEndDate(2024, 4, 30)
         # self.SetEndDate(2022, 9, 15)
@@ -49,7 +49,7 @@ class CentralAlgorithm(QCAlgorithm):
         #  -> 2 = INFO
         #  -> 3 = DEBUG
         #  -> 4 = TRACE (Attention!! This can consume your entire daily log limit)
-        self.logLevel = 3 if self.LiveMode else 3
+        self.logLevel = 0 if self.LiveMode else 3
 
 
         # Set the initial account value
@@ -73,12 +73,16 @@ class CentralAlgorithm(QCAlgorithm):
 
         self.performance = Performance(self)
 
+        self.positions_store = PositionsStore(self)
+        self.positions_store.load_positions()
+
         # Set the algorithm framework models
         # self.SetAlpha(FPLModel(self))
-        self.SetAlpha(SPXic(self))
+        # self.SetAlpha(SPXic(self))
         # self.SetAlpha(CCModel(self))
         # self.SetAlpha(SPXButterfly(self))
         # self.SetAlpha(SPXCondor(self))
+        self.SetAlpha(AssignmentModel(self))
 
         self.SetPortfolioConstruction(OptionsPortfolioConstruction(self))
 
@@ -89,13 +93,14 @@ class CentralAlgorithm(QCAlgorithm):
         # self.SetExecution(SmartPricingExecutionModel(self))
         # self.SetExecution(ImmediateExecutionModel())
 
-        # self.SetRiskManagement(NoStopLossModel(self))
+        self.SetRiskManagement(NoStopLossModel(self))
         # self.SetRiskManagement(StopLossModel(self))
         # self.SetRiskManagement(FPLMonitorModel(self))
-        self.SetRiskManagement(SPXicMonitor(self))
+        # self.SetRiskManagement(SPXicMonitor(self))
         # self.SetRiskManagement(CCMonitor(self))
         # self.SetRiskManagement(SPXButterflyMonitor(self))
         # self.SetRiskManagement(SPXCondorMonitor(self))
+        # self.SetRiskManagement(IBSMonitor(self))
 
     # Initialize the security every time that a new one is added
     def OnSecuritiesChanged(self, changes):
@@ -127,6 +132,7 @@ class CentralAlgorithm(QCAlgorithm):
         self.executionTimer.stop()
 
     def OnEndOfAlgorithm(self) -> None:
+        self.positions_store.store_positions()
         # Convert the dictionary into a Pandas Data Frame
         # dfAllPositions = pd.DataFrame.from_dict(self.allPositions, orient = "index")
         # Convert the dataclasses into Pandas Data Frame
@@ -168,5 +174,7 @@ class CentralAlgorithm(QCAlgorithm):
         # Find the last trading day for the given expiration date
         lastDay = list(tradingCalendar.GetDaysByType(TradingDayType.BusinessDay, expiry - timedelta(days = 20), expiry))[-1].Date
         return lastDay
+
+
 
 
