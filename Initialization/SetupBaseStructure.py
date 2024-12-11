@@ -51,18 +51,11 @@ class SetupBaseStructure:
     DEFAULT_PARAMETERS = {
         "creditStrategy": True,
         # -----------------------------
-        # THESE BELOW ARE GENERAL PARAMETERS
         "backtestMarketCloseCutoffTime": time(15, 45, 0),
-        # Controls whether to include Cancelled orders (Limit orders that didn't fill) in the final output
-        "includeCancelledOrders": True,
-        # Risk Free Rate for the Black-Scholes-Merton model
-        "riskFreeRate": 0.001,
-        # Upside/Downside stress applied to the underlying to calculate the portfolio margin requirement of the position
-        "portfolioMarginStress": 0.12,
-        # Controls the memory (in minutes) of EMA process. The exponential decay
-        # is computed such that the contribution of each value decays by 95%
-        # after <emaMemory> minutes (i.e. decay^emaMemory = 0.05)
-        "emaMemory": 200,
+        "includeCancelledOrders": True, # Controls inclusion of Cancelled orders in the final output
+        "riskFreeRate": 0.001, # Risk Free Rate for the Black-Scholes-Merton model
+        "portfolioMarginStress": 0.12, # Stress applied to underlying to calculate portfolio margin requirement of position
+        "emaMemory": 200,       # Controls the memory (in minutes) of EMA process
     }
 
     def __init__(self, context):
@@ -82,46 +75,24 @@ class SetupBaseStructure:
         # Set the timer to monitor the execution performance
         self.context.executionTimer = Timer(self.context)
         self.context.logger.debug(f'{self.__class__.__name__} -> Setup')
-        # Set brokerage model and margin account
+
         self.context.SetBrokerageModel(BrokerageName.InteractiveBrokersBrokerage, AccountType.Margin)
         # override security position group model
         self.context.Portfolio.SetPositions(SecurityPositionGroupModel.Null)
-        # Set requested data resolution
         self.context.universe_settings.resolution = self.context.timeResolution
 
-        # Keep track of the option contract subscriptions
+
         self.context.optionContractsSubscriptions = []
-        # Set Security Initializer
         self.context.SetSecurityInitializer(self.CompleteSecurityInitializer)
-        # Initialize the dictionary to keep track of all positions
         self.context.allPositions = {}
-
-        # Dictionary to keep track of all open positions
         self.context.openPositions = {}
-
-        # Create dictionary to keep track of all the working orders. It stores orderTags
         self.context.workingOrders = {}
-
-        # Create FIFO list to keep track of all the recently closed positions (needed for the Dynamic DTE selection)
-        self.context.recentlyClosedDTE = []
-
-        # Keep track of when was the last position opened
-        self.context.lastOpenedDttm = None
-
-        # Keep track of all strategies instances. We mainly need this to filter through them in case
-        # we want to call some general method.
-        self.context.strategies = []
-
-        # Keep track of all strategy monitors
+        self.context.recentlyClosedDTE = [] # FIFO keeping track of all recently closed positions (needed for the Dynamic DTE selection)
+        self.context.lastOpenedDttm = None # Keep track of when was the last position opened
+        self.context.strategies = [] # Keeps track of strategies instances
         self.context.strategyMonitors = {}
-
-        # Array to keep track of consolidators
         self.context.consolidators = {}
-
-        # Dictionary to keep track of all leg details across time
         self.positionTracking = {}
-
-        # Keep the chain object list in memory that gets updated before every Strategy update code run.
         self.context.chain = None
 
         # Assign the DEFAULT_PARAMETERS
@@ -269,19 +240,20 @@ class SetupBaseStructure:
         # Store the algorithm base variables
         strategy.ticker = ticker
         self.context.logger.debug(f"{self.__class__.__name__} -> AddUnderlying -> Ticker: {ticker}")
-        # Add the underlying and the option chain to the algorithm
+
         strategy.dataHandler = DataHandler(self.context, ticker, strategy)
+        #--------------- Adds the Underlying Equity here, not yet the Option (important for data subscriptions)
         underlying = strategy.dataHandler.AddUnderlying(self.context.timeResolution)
-        # Set data normalization mode to Raw
         underlying.SetDataNormalizationMode(DataNormalizationMode.Raw)
         self.context.logger.debug(f"{self.__class__.__name__} -> AddUnderlying -> Underlying: {underlying}")
+
+        #---------- Options Data handling starts here
+        # Store the symbol for the option and the underlying
+        strategy.underlyingSymbol = underlying.Symbol
         # Keep track of the option contract subscriptions
         self.context.optionContractsSubscriptions = []
 
-        # Store the symbol for the option and the underlying
-        strategy.underlyingSymbol = underlying.Symbol
-
-        # REGION FOR USING SLICE INSTEAD OF PROVIDER
+        #--------------- Adds the Option Chain here!!
         strategy.optionSymbol = None
         if strategy.useSlice:
             strategy.dataHandler.SetOptionFilter(underlying)
