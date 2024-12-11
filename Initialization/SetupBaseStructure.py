@@ -53,7 +53,7 @@ class SetupBaseStructure:
         # -----------------------------
         "backtestMarketCloseCutoffTime": time(15, 45, 0),
         "includeCancelledOrders": True, # Controls inclusion of Cancelled orders in the final output
-        "riskFreeRate": 0.001, # Risk Free Rate for the Black-Scholes-Merton model
+        "riskFreeRate": 0.05, # Risk Free Rate for the Black-Scholes-Merton model
         "portfolioMarginStress": 0.12, # Stress applied to underlying to calculate portfolio margin requirement of position
         "emaMemory": 200,       # Controls the memory (in minutes) of EMA process
     }
